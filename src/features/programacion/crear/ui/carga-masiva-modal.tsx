@@ -24,11 +24,18 @@ export function CargaMasivaModal({ isOpen, onClose, onUpload }: CargaMasivaModal
             throw new Error('El archivo debe tener al menos una fila de datos además del encabezado')
         }
 
+        // Detectar el separador (coma o punto y coma)
+        const header = lines[0]
+        const separator = header.includes(';') ? ';' : ','
+
         const productos: Producto[] = []
 
         // Skip header row
         for (let i = 1; i < lines.length; i++) {
-            const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''))
+            const line = lines[i].trim()
+            if (!line) continue // Ignorar líneas vacías
+
+            const values = line.split(separator).map(v => v.trim().replace(/^"|"$/g, ''))
 
             if (values.length < 4) {
                 throw new Error(`Fila ${i + 1}: faltan columnas. Se esperan: OrdenFabricacion, SKU, Descripcion, Cantidad`)
