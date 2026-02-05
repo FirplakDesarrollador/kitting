@@ -41,38 +41,48 @@ export default function ChecklistPrekittingPage() {
                 return
             }
 
-            const { data, error } = await supabase
+            const { data: productoData, error: productoError } = await supabase
                 .from('KT_ProgramacionProducto')
                 .select('*')
                 .eq('id', parseInt(productId))
                 .single()
 
-            if (error || !data) {
-                console.error('Error fetching producto:', error)
+            if (productoError || !productoData) {
+                console.error('Error fetching producto:', productoError)
                 router.push('/prekitting')
                 return
             }
 
-            setProducto(data)
+            // Fetch componentes from query_kitting view based on SKU
+            if (productoData.sku) {
+                const { data: kittingData, error: kittingError } = await supabase
+                    .from('query_kitting')
+                    .select('Componentes')
+                    .eq('SKU', productoData.sku)
+                    .single()
+
+                if (!kittingError && kittingData) {
+                    productoData.componenetes = kittingData.Componentes as Componente[]
+                } else {
+                    console.error('Error fetching kitting components:', kittingError)
+                }
+            }
+
+            setProducto(productoData)
             setLoading(false)
         }
 
         fetchProducto()
     }, [productId, router, supabase])
 
+
     const handleCheckChange = (compIndex: number, unitIndex: number, checked: boolean) => {
         const key = `${compIndex}-${unitIndex}`
         setCheckedItems(prev => ({ ...prev, [key]: checked }))
     }
 
-    // Si no hay componentes, mostrar componentes de ejemplo
-    const componentes: Componente[] = producto?.componenetes || [
-        { nombre_componente: 'Tornillo M6x20', cantidad: 8 },
-        { nombre_componente: 'Bisagra oculta', cantidad: 4 },
-        { nombre_componente: 'Riel cajón 45cm', cantidad: 2 },
-        { nombre_componente: 'Chazo expansivo', cantidad: 4 },
-        { nombre_componente: 'Tirador cromado', cantidad: 2 },
-    ]
+    const componentes: Componente[] = producto?.componenetes || []
+
 
     const totalUnities = producto?.cantidad || 0
     const expectedChecks = componentes.length * totalUnities
